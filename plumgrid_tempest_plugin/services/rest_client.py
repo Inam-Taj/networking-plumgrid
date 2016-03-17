@@ -10,9 +10,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from tempest import config
 from oslo_serialization import jsonutils
 import requests
+from tempest import config
 
 CONF = config.CONF
 
@@ -23,7 +23,6 @@ class RESTClient(object):
         API extensions
     """
 
-    # Constructor
     def __init__(self, tenant_name, username, password):
         self.tenant = tenant_name
         self.username = username
@@ -161,7 +160,7 @@ class RESTClient(object):
         # if UUID is provided, then delete by ID
         if 'td_id' in kwargs:
             td_id = kwargs["td_id"]
-            return self.__delete_transit_domain_by_uuid(td_id)
+            return self._delete_transit_domain_by_uuid(td_id)
 
         # if Name of TD is given, then process respectively
         elif 'td_name' in kwargs:
@@ -190,14 +189,14 @@ class RESTClient(object):
             elif no_of_domains == 1:
 
                 # Delete it by UUID
-                return self.__delete_transit_domain_by_uuid(
+                return self._delete_transit_domain_by_uuid(
                                             transit_domains[0]['id'])
 
         # if no argument inside kwargs
         else:
             return False
 
-    def __delete_transit_domain_by_uuid(self, td_id):
+    def _delete_transit_domain_by_uuid(self, td_id):
         """
             Private Function
             This function deletes a Transit Domain

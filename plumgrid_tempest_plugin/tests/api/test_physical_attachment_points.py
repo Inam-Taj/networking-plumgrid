@@ -26,10 +26,15 @@ class TestPhysicalAttachmentPoint(base.BaseNetworkTest):
         Document: "Physical Attachment Point Tempest Test Plan"
     """
 
-    # Class level values
-    hostname = "devstack-RiG"
-    interface = "eth1"
-    rest_c = rs.RESTClient("admin", "admin", "pass")
+    # Global parameters to be used by Tests
+    username = CONF.auth.admin_username
+    tenant_name = CONF.auth.admin_tenant_name
+    password = CONF.auth.admin_password
+    hostname = CONF.plumgrid.hostname
+    interface = CONF.plumgrid.interfaces[0]
+
+    # REST Client's object to make REST calls
+    rest_c = rs.RESTClient(tenant_name, username, password)
 
     @test.idempotent_id('2fb95a42-482d-45cd-93fd-9e161a709874')
     def test_create_single_pap(self):
