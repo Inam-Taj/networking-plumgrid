@@ -101,7 +101,7 @@ class TestTransitDomain(base.BaseNetworkTest):
         totalMatches = 0         # total Matches to be found
         myTransitDomains = {}    # dict to create new TDs
 
-        # Create 10 Transit Domains and save their IDs
+        # Create 5 Transit Domains and save their IDs
         for i in range(0, totalTDs):
             tdName = "my_TD_" + str(random.randint(500, 5000))
             newTd = restC.createTransitDomain(tdName)

@@ -26,6 +26,7 @@ class RESTClient(object):
     port_neutron = "9696"
     base_url = "http://localhost:"
     transit_domain_url = "/v2.0/transit-domains"
+    pap_url = "/v2.0/physical-attachment-points"
 
     # Global Access Token to be used to make REST calls to Neutron
     global accessToken
@@ -202,6 +203,157 @@ class RESTClient(object):
         # Set up URL to specific access Transit Domain
         url = self.base_url + self.port_neutron \
             + self.transit_domain_url + "/" + tdId
+
+        # Set up Custom Headers for Request
+        headers = {'X-Auth-Token': self.accessToken,
+                   'accept': 'application/json',
+                   'content-type': 'application/json'}
+
+        # Send PUT request to delete Transit Domain Details
+        response = requests.delete(url, headers=headers)
+
+        # if server deleted transit domain successfully then return true
+        if(response.status_code == 204):
+            return True
+        else:
+            return False
+
+    def createPap(self, **kwargs):
+        """
+            REST Function to create return (created) PAP
+            ARGUMENTS **kwargs will have:
+                name = name of Physical Attachment Point
+                interfaces = LIST of interfaces that includes
+                hostnames and respective interface_names
+                transit_domain_id = UUID of Transit Domain
+                hash_mode = String: L2 / L3 / L2+L3 / L3+L4
+                lacp = String: True / False
+            RETURN TYPE: JSON
+        """
+
+        # Set up URL to be accessed
+        url = self.base_url + self.port_neutron + self.pap_url
+
+        # Set up Custom Headers for Request
+        headers = {'X-Auth-Token': self.accessToken,
+                   'accept': 'application/json',
+                   'content-type': 'application/json'}
+
+        data = {"physical_attachment_point": kwargs}
+
+        # Convert it into JSON
+        dataInJson = jsonutils.dumps(data)
+
+        # Send POST request to create PAP and get RESPONSE
+        response = requests.post(url, headers=headers, data=dataInJson)
+
+        # Convert response in JSON
+        jsonResp = response.json()
+
+        # Return JSON of response
+        return jsonResp
+
+    def showPap(self, papId):
+        """
+            Function to return a specific PAP
+            ARGUMENTS:
+                papId = ID of Physical Attachment Point
+            RETURN TYPE: JSON
+        """
+
+        # Set up URL for a specific Transit Domain to be accessed
+        url = self.base_url + self.port_neutron \
+            + self.pap_url + "/" + papId
+
+        # Set up Custom Headers for Request
+        headers = {'X-Auth-Token': self.accessToken,
+                   'accept': 'application/json',
+                   'content-type': 'application/json'}
+
+        # Send GET request and get RESPONSE
+        response = requests.get(url, headers=headers)
+
+        # Convert response in JSON
+        jsonResp = response.json()
+
+        # Return JSON of response
+        return jsonResp
+
+    def listPap(self):
+        """
+            REST Function to list all (existing) PAPs
+            ARGUMENTS: NONE
+            RETURN TYPE: JSON
+        """
+
+        # Set up URL to be accessed
+        url = self.base_url + self.port_neutron + self.pap_url
+
+        # Set up Custom Headers for Request
+        headers = {'X-Auth-Token': self.accessToken,
+                   'accept': 'application/json',
+                   'content-type': 'application/json'}
+
+        # Send GET request to List all TDs and get response in JSON
+        response = requests.get(url, headers=headers)
+
+        # Convert response in JSON
+        jsonResp = response.json()
+
+        # Return JSON of response
+        return jsonResp
+
+    def updatePap(self, papId, **kwargs):
+        """
+            Function to update PAP with given new parameters
+            ARGUMENTS
+                id = UUID of Physical Attachment Point
+                **kwargs will have:
+                name = name of Physical Attachment Point
+                add_interfaces = LIST of new interfaces to Add
+                remove_interfaces = LIST of interfaces to Remove
+                hash_mode = String: L2 / L3 / L2+L3 / L3+L4
+                lacp = String: True / False
+
+            RETURN TYPE: JSON
+        """
+
+        # Set up URL to specific access to PAP
+        url = self.base_url + self.port_neutron \
+            + self.pap_url + "/" + papId
+
+        # Set up Custom Headers for Request
+        headers = {'X-Auth-Token': self.accessToken,
+                   'accept': 'application/json',
+                   'content-type': 'application/json'}
+
+        # Set up parameters to send PAP request according to variables
+        data = {"physical_attachment_point": kwargs}
+
+        # Convert it into JSON
+        dataInJson = jsonutils.dumps(data)
+
+        # Send PUT request to update Transit Domain Details
+        response = requests.put(url, headers=headers, data=dataInJson)
+
+        # NOTE: response returns 200 in normal cases
+        # so get body.text which is String; converts it to JSON
+        jsonResp = jsonutils.loads(response.text)
+
+        # return JSON Response
+        return jsonResp
+
+    def deletePap(self, papId):
+        """
+            Function to delete PAP with given UUID
+            ARGUMENTS:
+                papId = ID of Physical Attachment Point to find it
+            RETURN TYPE: boolean [True, False]
+        """
+
+        # Set up URL to specific access Transit Domain
+        url = self.base_url + self.port_neutron \
+            + self.pap_url + "/" + papId
 
         # Set up Custom Headers for Request
         headers = {'X-Auth-Token': self.accessToken,

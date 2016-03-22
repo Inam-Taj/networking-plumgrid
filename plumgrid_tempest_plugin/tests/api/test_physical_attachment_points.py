@@ -98,7 +98,6 @@ class TestPhysicalAttachmentPoint(base.BaseNetworkTest):
         # Clean Up: Delete the created Pap
         restC.deletePap(newPap['physical_attachment_point']['id'])
 
-    @skip_because("Test Code is Incomplete")
     @test.idempotent_id('d647db45-f0da-4fe3-b297-dedc0efd5944')
     def test_list_pap(self):
         """
