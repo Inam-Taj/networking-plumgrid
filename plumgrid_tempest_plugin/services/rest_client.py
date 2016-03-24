@@ -112,7 +112,7 @@ class RESTClient(object):
         """
             Function to return a specific Transit Domain
             ARGUMENTS:
-                tdId = ID of Transit Domain (not uuid of TD)
+                tdId = ID of Transit Domain (tenant_id of TD)
             RETURN TYPE: JSON
         """
 
@@ -162,7 +162,7 @@ class RESTClient(object):
         """
             Function to update Transit Domain with given new parameters
             ARGUMENTS:
-                tdId = ID of Transit Domain (not uuid of TD) to find TD by ID
+                tdId = ID of Transit Domain (tenant_id of TD) to find TD by ID
                 tdName = New name of Transit Domain which is to be updated
             RETURN TYPE: JSON
         """
@@ -192,13 +192,26 @@ class RESTClient(object):
         # return JSON Response
         return jsonResp
 
-    def deleteTransitDomain(self, tdId):
+    def deleteTransitDomain(self, **kwargs):
         """
             Function to delete Transit Domain with given ID of Transit Domain
-            ARGUMENTS:
-                tdId = ID of Transit Domain (not uuid of TD) to find TD by ID
+            ARGUMENTS which kwargs MAY have:
+                tdId = ID of Transit Domain (not tenant_id) to find TD by ID
+                tdName = Name of Transit Domain
             RETURN TYPE: boolean [True, False]
         """
+
+        tdId = None
+
+        # if tdName is given, then resolve its UUID
+        if 'tdName' in kwargs:
+            tdId = self.__getTransitDomainByName(kwargs['tdName'])
+
+            # if UUID of Transit Domain is not found
+            if(tdId is None):
+                return False
+        else:
+            tdId = kwargs['tdId']
 
         # Set up URL to specific access Transit Domain
         url = self.base_url + self.port_neutron \
@@ -217,6 +230,20 @@ class RESTClient(object):
             return True
         else:
             return False
+
+    def __getTransitDomainByName(self, tdName):
+        """
+            Function that resolves Transit Domain's Name to
+            respective UUID. It returns None if UUID isn't resovled
+        """
+        allTDs = self.listTransitDomain()
+        foundTD = None
+
+        for value in allTDs['transit_domains']:
+            if(value['name'] == tdName):
+                foundTD = value['id']
+
+        return foundTD
 
     def createPap(self, **kwargs):
         """

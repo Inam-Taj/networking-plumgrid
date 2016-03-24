@@ -25,6 +25,8 @@ class TestPhysicalAttachmentPoint(base.BaseNetworkTest):
         Attachment Point that are specified in the
         Document: "Physical Attachment Point Tempest Test Plan"
     """
+    hostname = "devstack-RiG"
+    interface = "eth1"
 
     @test.idempotent_id('2fb95a42-482d-45cd-93fd-9e161a709874')
     def test_create_pap(self):
@@ -34,14 +36,16 @@ class TestPhysicalAttachmentPoint(base.BaseNetworkTest):
         # generate a random number and concatenate with Pap Name
         tempPapName = "my_Pap_" + str(random.randint(100, 10000))
 
+        interfaces = [{'hostname': self.hostname,
+                       'interface': self.interface}]
+
         # create Pap
-        newPap = restC.createPap(tempPapName,
-            {'hostname': 'devstack-RiG', 'interface': 'eth1'},
-            "", "L2", "True")
+        newPap = restC.createPap(name=tempPapName, interfaces=interfaces,
+                                 hash_mode="L2", lacp="True")
 
         # Verifying Pap Creation with it's name
         self.assertEqual(tempPapName,
-            newPap['physical_attachment_point']['name'])
+                         newPap['physical_attachment_point']['name'])
 
         # Clean Up: Delete the created Pap
         restC.deletePap(newPap['physical_attachment_point']['id'])
@@ -54,16 +58,19 @@ class TestPhysicalAttachmentPoint(base.BaseNetworkTest):
         # generate a random number and concatenate with Pap Name
         tempPapName = "my_Pap_" + str(random.randint(100, 10000))
 
-        newPap = restC.createPap(tempPapName,
-            {'hostname': 'devstack-RiG', 'interface': 'eth1'},
-            "", "L2", "True")
+        interfaces = [{'hostname': self.hostname,
+                       'interface': self.interface}]
+
+        # create Pap
+        newPap = restC.createPap(name=tempPapName, interfaces=interfaces,
+                                 hash_mode="L2", lacp="True")
 
         # show PAP
         tempPap = restC.showPap(newPap['physical_attachment_point']['id'])
 
         # compare PAP Ids to verify correctness
         self.assertEqual(newPap['physical_attachment_point']['id'],
-            tempPap['physical_attachment_point']['id'])
+                         tempPap['physical_attachment_point']['id'])
 
         # Clean Up: Delete the created Pap
         restC.deletePap(newPap['physical_attachment_point']['id'])
@@ -76,62 +83,31 @@ class TestPhysicalAttachmentPoint(base.BaseNetworkTest):
         # generate a random number and concatenate with Pap Name
         newPapName = "updated_Pap_Name_" + str(random.randint(100, 10000))
 
-        newPap = restC.createPap(newPapName,
-            {'hostname': 'devstack-RiG', 'interface': 'eth1'},
-            "", "L2", "True")
+        interfaces = [{'hostname': self.hostname,
+                       'interface': self.interface}]
+
+        newPap = restC.createPap(name=newPapName,
+                                 interfaces=interfaces,
+                                 hash_mode="L2", lacp="True")
 
         updatedPap = restC.updatePap(newPap['physical_attachment_point']['id'],
-            newPapName, {}, {}, "L2", "False")
+                                     name=newPapName, hash_mode="L2",
+                                     lacp="False")
 
         # compare Pap Name to verify correctness of updation
         self.assertEqual(newPapName,
-            updatedPap['physical_attachment_point']['name'])
+                         updatedPap['physical_attachment_point']['name'])
 
         # compare hash_mode to verify correctness of updation
         self.assertEqual("L2",
-            updatedPap['physical_attachment_point']['hash_mode'])
+                         updatedPap['physical_attachment_point']['hash_mode'])
 
         # compare lacp to verify correctness of updation
-        self.assertEqual("False",
-            updatedPap['physical_attachment_point']['lacp'])
+        self.assertEqual(False,
+                         updatedPap['physical_attachment_point']['lacp'])
 
         # Clean Up: Delete the created Pap
         restC.deletePap(newPap['physical_attachment_point']['id'])
-
-    @test.idempotent_id('d647db45-f0da-4fe3-b297-dedc0efd5944')
-    def test_list_pap(self):
-        """
-            Function: Tests whether details of all Paps
-            are correctly fetched or not.
-        """
-
-        # restC = rs.RESTClient()
-        # totalPaps = 5            # total PAPs to be created
-        # totalMatches = 0         # total Matches to be found
-        # myPaps = {}              # dict to create new PAPs
-
-        # # Create 5 PAPs and save their IDs
-        # for i in range(0, totalPaps):
-        #     papName = "my_Pap_" + str(random.randint(500, 5000))
-        #     newPap = restC.createPap(papName)
-        #     myPaps[papName] = newPap['physical_attachment_point']['id']
-
-        # allPaps = restC.listPap()
-
-        # # compare newly created Paps within existing TDs
-        # for papName, papId in myPaps.items():
-
-        #     for value in allPaps['physical_attachment_points']:
-        #         if(tdId == value['id']):
-        #             totalMatches += 1
-
-        # # check if all created Paps were found successfully
-        # self.assertEqual(totalPaps, totalMatches)
-
-        # # CleanUp: Delete all newly created TDs
-        # for papName, tdId in myPaps.items():
-        #     restC.deleteTransitDomain(tdId)
-        self.assertEqual(4, 4)
 
     @test.idempotent_id('3f817924-7ca0-41a3-bf30-ce00079a90d6')
     def test_delete_pap(self):
@@ -141,11 +117,230 @@ class TestPhysicalAttachmentPoint(base.BaseNetworkTest):
         # generate a random number and concatenate with Pap Name
         tempPapName = "my_Pap_" + str(random.randint(100, 10000))
 
-        newPap = restC.createPap(tempPapName,
-            {'hostname': 'devstack-RiG', 'interface': 'eth1'},
-            "", "L2", "True")
+        interfaces = [{'hostname': self.hostname,
+                       'interface': self.interface}]
+
+        # create Pap
+        newPap = restC.createPap(name=tempPapName, interfaces=interfaces,
+                                 hash_mode="L2", lacp="True")
 
         result = restC.deletePap(newPap['physical_attachment_point']['id'])
 
         # compare results of deletion
         self.assertEqual(True, result)
+
+    @test.idempotent_id('0634b1f7-8332-4f10-8079-42b274c7e156')
+    def test_create_pap_no_parameters(self):
+        """
+            Functionality:
+            - create physical attachment point without
+            providing any input values
+        """
+
+        restC = rs.RESTClient()
+        noIntfs = False
+
+        # create Pap
+        newPap = restC.createPap()
+
+        # check if returned interfaces field is empty
+        if not newPap['physical_attachment_point']['interfaces']:
+            noIntfs = True
+
+        # compare empty interfaces to verify correctness
+        self.assertEqual(True, noIntfs)
+
+        # compare hash_mode to verify correctness
+        self.assertEqual("L2",
+                         newPap['physical_attachment_point']['hash_mode'])
+
+        # compare lacp to verify correctness
+        self.assertEqual(False,
+                         newPap['physical_attachment_point']['lacp'])
+
+        # Clean Up: Delete the created Pap
+        restC.deletePap(newPap['physical_attachment_point']['id'])
+
+    @test.idempotent_id('fb1e3803-2872-439a-bb4a-e3de50d3ed91')
+    def test_create_pap_name(self):
+        """
+            Functionality:
+            - create physical attachment point but only
+            provide the name parameter as input
+        """
+        restC = rs.RESTClient()
+        noIntfs = False
+
+        # generate a random number and concatenate with Pap Name
+        tempPapName = "my_Pap_" + str(random.randint(100, 10000))
+
+        # create Pap
+        newPap = restC.createPap(name=tempPapName)
+
+        # check if returned interfaces field is empty
+        if not newPap['physical_attachment_point']['interfaces']:
+            noIntfs = True
+
+        # Verifying Pap Creation with it's name
+        self.assertEqual(tempPapName,
+                         newPap['physical_attachment_point']['name'])
+
+        # compare empty interfaces to verify correctness
+        self.assertEqual(True, noIntfs)
+
+        # compare hash_mode to verify correctness
+        self.assertEqual("L2",
+                         newPap['physical_attachment_point']['hash_mode'])
+
+        # compare lacp to verify correctness
+        self.assertEqual(False,
+                         newPap['physical_attachment_point']['lacp'])
+
+        # Clean Up: Delete the created Pap
+        restC.deletePap(newPap['physical_attachment_point']['id'])
+
+    @test.idempotent_id('60bbb470-ac16-47ed-ae04-61a343d97146')
+    def test_create_pap_lacp(self):
+        """
+            Functionality:
+            - create physical attachment point but only
+            provide the lacp parameter as input
+        """
+        restC = rs.RESTClient()
+        noIntfs = False
+
+        # create Pap
+        newPap = restC.createPap(lacp=True)
+
+        # check if returned interfaces field is empty
+        if not newPap['physical_attachment_point']['interfaces']:
+            noIntfs = True
+
+        # compare lacp to verify correctness
+        self.assertEqual(True,
+                         newPap['physical_attachment_point']['lacp'])
+
+        # compare empty interfaces to verify correctness
+        self.assertEqual(True, noIntfs)
+
+        # compare hash_mode to verify correctness
+        self.assertEqual("L2",
+                         newPap['physical_attachment_point']['hash_mode'])
+
+        # Clean Up: Delete the created Pap
+        restC.deletePap(newPap['physical_attachment_point']['id'])
+
+    @test.idempotent_id('697354b0-6636-4e5e-92e9-562a6d2e407e')
+    def test_create_pap_hash_mode(self):
+        """
+            Functionality:
+            - create physical attachment point but only
+            provide the hash_mode parameter as input
+        """
+        restC = rs.RESTClient()
+        noIntfs = False
+
+        # create Pap
+        newPap = restC.createPap(hash_mode="L2")
+
+        # check if returned interfaces field is empty
+        if not newPap['physical_attachment_point']['interfaces']:
+            noIntfs = True
+
+        # compare hash_mode to verify correctness
+        self.assertEqual("L2",
+                         newPap['physical_attachment_point']['hash_mode'])
+
+        # compare lacp to verify correctness
+        self.assertEqual(False,
+                         newPap['physical_attachment_point']['lacp'])
+
+        # compare empty interfaces to verify correctness
+        self.assertEqual(True, noIntfs)
+
+        # Clean Up: Delete the created Pap
+        restC.deletePap(newPap['physical_attachment_point']['id'])
+
+    @test.idempotent_id('58954f98-b9f0-4415-83b4-30be114378a2')
+    def test_create_pap_interfaces_empty(self):
+        """
+            Functionality:
+            - create physical attachment point but only provide
+            empty list of interfaces parameter as input
+        """
+        restC = rs.RESTClient()
+        noIntfs = False
+
+        # create Pap
+        newPap = restC.createPap()
+
+        # check if returned interfaces field is empty
+        if not newPap['physical_attachment_point']['interfaces']:
+            noIntfs = True
+
+        # compare empty interfaces to verify correctness
+        self.assertEqual(True, noIntfs)
+
+        # compare hash_mode to verify correctness
+        self.assertEqual("L2",
+                         newPap['physical_attachment_point']['hash_mode'])
+
+        # compare lacp to verify correctness
+        self.assertEqual(False,
+                         newPap['physical_attachment_point']['lacp'])
+
+        # Clean Up: Delete the created Pap
+        restC.deletePap(newPap['physical_attachment_point']['id'])
+
+    @test.idempotent_id('929c8540-597e-49c2-b645-1b5d3f7ea88a')
+    def test_create_pap_interfaces_dict(self):
+        """
+            Functionality:
+            - create physical attachment point but only provide
+            dict of interfaces parameter as input
+        """
+        restC = rs.RESTClient()
+        interfaces = {'hostname': self.hostname, 'interface': self.interface}
+
+        # create Pap
+        newPap = restC.createPap(interfaces=interfaces)
+
+        # compare hash_mode to verify correctness
+        self.assertEqual("InvalidInterfaceFormat",
+                         newPap['NeutronError']['type'])
+
+    @test.idempotent_id('673b0dc9-4ebe-4148-9a43-43f84f673903')
+    def test_create_pap_interfaces_no_host(self):
+        """
+            Functionality:
+            - create PAP with list of interfaces
+            - one of the interfaces should be missing hostname
+
+        """
+        restC = rs.RESTClient()
+        interfaces = [{'interface': self.interface}]
+
+        # create Pap
+        newPap = restC.createPap(interfaces=interfaces)
+
+        # compare hash_mode to verify correctness
+        self.assertEqual("InvalidInterfaceFormat",
+                         newPap['NeutronError']['type'])
+
+    @test.idempotent_id('f1fce688-4cb5-4327-b3b7-96c7abc066aa')
+    def test_create_pap_interfaces_no_interface_name(self):
+        """
+            Functionality:
+            - create PAP with list of interfaces
+            - one of the interfaces should be missing interface
+
+        """
+        restC = rs.RESTClient()
+        interfaces = [{'hostname': self.hostname}]
+
+        # create Pap
+        newPap = restC.createPap(interfaces=interfaces)
+
+        # compare hash_mode to verify correctness
+        self.assertEqual("InvalidInterfaceFormat",
+                         newPap['NeutronError']['type'])
