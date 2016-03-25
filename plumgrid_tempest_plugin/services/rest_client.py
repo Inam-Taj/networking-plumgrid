@@ -10,38 +10,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from tempest import config
 from oslo_serialization import jsonutils
 import requests
+
+CONF = config.CONF
 
 
 class RESTClient(object):
     """
-        This class makes REST calls to API Neutron in order to perform:
-        - CRUD on Transit Domains (TD)
-        - CRUD on Physical Attachment Points (PAP)
+        This class implements a REST client for PLUMgrid Neutron
+        API extensions
     """
 
-    # Static Values
-    port_keystone = "5000"
-    port_neutron = "9696"
-    base_url = "http://localhost:"
-    transit_domain_url = "/v2.0/transit-domains"
-    pap_url = "/v2.0/physical-attachment-points"
-
-    # Global Access Token to be used to make REST calls to Neutron
-    global accessToken
-
-    # OpenStack Credentials to access KeyStone/Neutron APIs
-    username = "admin"
-    password = "pass"
-
     # Constructor
-    def __init__(self):
+    def __init__(self, tenant_name, username, password):
+        self.tenant = tenant_name
+        self.username = username
+        self.password = password
+        self.base_url = "http://localhost:"
+        self.port_neutron = "9696"
+        self.transit_domain_url = "/v2.0/transit-domains"
+        self.pap_url = "/v2.0/physical-attachment-points"
+        self.headers = {'accept': 'application/json',
+                        'content-type': 'application/json'}
 
-        # Get Access Token in order to start making REST calls
-        self.accessToken = self.getAccessToken()
-
-    def getAccessToken(self):
+    def _get_access_token(self):
         """
             Function that returns Access Token from Keystone that
             is required to make REST calls to Neutron
@@ -49,203 +43,157 @@ class RESTClient(object):
             RETURN TYPE: String
         """
 
-        # Set up URL to access
-        url = self.base_url + self.port_keystone + "/v2.0/tokens"
-
-        # Set up Custom Headers for Request
-        headers = {'accept': 'application/json', 'content-type':
-                   'application/json'}
+        # Set up auth URL
+        url = CONF.identity.uri + "/tokens"
 
         # Set up parameters to send Authorization Details
         data = {"auth": {"passwordCredentials": {"username": self.username,
                          "password": self.password},
-                         "tenantName": "admin"}}
+                         "tenantName": self.tenant}}
 
-        # Convert it into JSON
-        dataInJson = jsonutils.dumps(data)
+        body = jsonutils.dumps(data)
+        response = requests.post(url, headers=self.headers, data=body)
+        resp_body = response.json()
 
-        # Send POST request and get RESPONSE
-        response = requests.post(url, headers=headers, data=dataInJson)
+        return resp_body['access']['token']['id']
 
-        # Convert response in JSON
-        jsonResp = response.json()
+    def _authenticate(self):
+        token = self._get_access_token()
+        self.headers.update({'X-Auth-Token': token})
 
-        # Extract Access Token from JSON Response
-        self.accessToken = jsonResp['access']['token']['id']
-
-        # Return Access Token
-        return self.accessToken
-
-    def createTransitDomain(self, tdName):
+    def create_transit_domain(self, td_name):
         """
             REST Function to create a Transit Domain
             and return the created Transit Domain
             ARGUMENTS:
-                tdName = name of transit domain
+                td_name = name of transit domain
             RETURN TYPE: JSON
         """
 
-        # Set up URL to be accessed
+        # Get authentication
+        self._authenticate()
+
+        # Create Resource
         url = self.base_url + self.port_neutron + self.transit_domain_url
+        data = {"transit_domain": {"name": td_name}}
+        body = jsonutils.dumps(data)
+        response = requests.post(url, headers=self.headers, data=body)
+        resp_body = response.json()
 
-        # Set up Custom Headers for Request
-        headers = {'X-Auth-Token': self.accessToken,
-                   'accept': 'application/json',
-                   'content-type': 'application/json'}
+        return resp_body
 
-        # Set up parameters to send Transit Domain Name
-        data = {"transit_domain": {"name": tdName}}
-
-        # Convert it into JSON
-        dataInJson = jsonutils.dumps(data)
-
-        # Send POST request to create Transit Domain and get RESPONSE
-        response = requests.post(url, headers=headers, data=dataInJson)
-
-        # Convert response in JSON
-        jsonResp = response.json()
-
-        # Return JSON of response
-        return jsonResp
-
-    def showTransitDomain(self, tdId):
+    def show_transit_domain(self, td_id):
         """
             Function to return a specific Transit Domain
             ARGUMENTS:
-                tdId = ID of Transit Domain (tenant_id of TD)
+                td_id = ID of Transit Domain (tenant_id of TD)
             RETURN TYPE: JSON
         """
 
-        # Set up URL for a specific Transit Domain to be accessed
+        # Get authentication
+        self._authenticate()
+
         url = self.base_url + self.port_neutron \
-            + self.transit_domain_url + "/" + tdId
+            + self.transit_domain_url + "/" + td_id
 
-        # Set up Custom Headers for Request
-        headers = {'X-Auth-Token': self.accessToken,
-                   'accept': 'application/json',
-                   'content-type': 'application/json'}
+        response = requests.get(url, headers=self.headers)
+        resp_body = response.json()
+        return resp_body
 
-        # Send GET request and get RESPONSE
-        response = requests.get(url, headers=headers)
-
-        # Convert response in JSON
-        jsonResp = response.json()
-
-        # Return JSON of response
-        return jsonResp
-
-    def listTransitDomain(self):
+    def list_transit_domain(self):
         """
             REST Function to list all (existing) Transit Domain
             ARGUMENTS: NONE
             RETURN TYPE: JSON
         """
 
-        # Set up URL to be accessed
+        # Get authentication
+        self._authenticate()
+
         url = self.base_url + self.port_neutron + self.transit_domain_url
 
-        # Set up Custom Headers for Request
-        headers = {'X-Auth-Token': self.accessToken,
-                   'accept': 'application/json',
-                   'content-type': 'application/json'}
+        response = requests.get(url, headers=self.headers)
+        resp_body = response.json()
+        return resp_body
 
-        # Send GET request to List all TDs and get response in JSON
-        response = requests.get(url, headers=headers)
-
-        # Convert response in JSON
-        jsonResp = response.json()
-
-        # Return JSON of response
-        return jsonResp
-
-    def updateTransitDomain(self, tdId, tdName):
+    def update_transit_domain(self, td_id, td_name):
         """
             Function to update Transit Domain with given new parameters
             ARGUMENTS:
-                tdId = ID of Transit Domain (tenant_id of TD) to find TD by ID
-                tdName = New name of Transit Domain which is to be updated
+                td_id = ID of Transit Domain (tenant_id of TD) to find TD by ID
+                td_name = New name of Transit Domain which is to be updated
             RETURN TYPE: JSON
         """
 
+        # Get authentication
+        self._authenticate()
+
         # Set up URL to specific access Transit Domain
         url = self.base_url + self.port_neutron \
-            + self.transit_domain_url + "/" + tdId
+            + self.transit_domain_url + "/" + td_id
 
-        # Set up Custom Headers for Request
-        headers = {'X-Auth-Token': self.accessToken,
-                   'accept': 'application/json',
-                   'content-type': 'application/json'}
+        data = {"transit_domain": {"name": td_name}}
+        body = jsonutils.dumps(data)
+        response = requests.put(url, headers=self.headers, data=body)
+        resp_body = jsonutils.loads(response.text)
 
-        # Set up parameters to send Transit Domain Name
-        data = {"transit_domain": {"name": tdName}}
+        return resp_body
 
-        # Convert it into JSON
-        dataInJson = jsonutils.dumps(data)
-
-        # Send PUT request to update Transit Domain Details
-        response = requests.put(url, headers=headers, data=dataInJson)
-
-        # NOTE: response returns 200 in normal cases
-        # so get body.text which is String; converts it to JSON
-        jsonResp = jsonutils.loads(response.text)
-
-        # return JSON Response
-        return jsonResp
-
-    def deleteTransitDomain(self, **kwargs):
+    def delete_transit_domain(self, **kwargs):
         """
             Function to delete Transit Domain with given ID of Transit Domain
             ARGUMENTS which kwargs MAY have:
-                tdId = ID of Transit Domain (not tenant_id) to find TD by ID
-                tdName = Name of Transit Domain
+                td_id = ID of Transit Domain (not tenant_id) to find TD by ID
+                td_name = Name of Transit Domain
             RETURN TYPE: boolean [True, False]
         """
 
-        tdId = None
+        # Get authentication
+        self._authenticate()
 
-        # if tdName is given, then resolve its UUID
-        if 'tdName' in kwargs:
-            tdId = self.__getTransitDomainByName(kwargs['tdName'])
+        td_id = None
+
+        # if td_name is given, then resolve its UUID
+        if 'td_name' in kwargs:
+            td_id = self.__get_transit_domain_by_name(kwargs['td_name'])
 
             # if UUID of Transit Domain is not found
-            if(tdId is None):
+            if td_id is None:
                 return False
         else:
-            tdId = kwargs['tdId']
+            td_id = kwargs['td_id']
 
         # Set up URL to specific access Transit Domain
         url = self.base_url + self.port_neutron \
-            + self.transit_domain_url + "/" + tdId
+            + self.transit_domain_url + "/" + td_id
 
-        # Set up Custom Headers for Request
-        headers = {'X-Auth-Token': self.accessToken,
-                   'accept': 'application/json',
-                   'content-type': 'application/json'}
-
-        # Send PUT request to delete Transit Domain Details
-        response = requests.delete(url, headers=headers)
+        response = requests.delete(url, headers=self.headers)
 
         # if server deleted transit domain successfully then return true
-        if(response.status_code == 204):
+        if response.status_code == 204:
             return True
         else:
             return False
 
-    def __getTransitDomainByName(self, tdName):
+    def __get_transit_domain_by_name(self, td_name):
         """
             Function that resolves Transit Domain's Name to
             respective UUID. It returns None if UUID isn't resovled
         """
-        allTDs = self.listTransitDomain()
-        foundTD = None
 
-        for value in allTDs['transit_domains']:
-            if(value['name'] == tdName):
-                foundTD = value['id']
+        # Get authentication
+        self._authenticate()
 
-        return foundTD
+        all_tds = self.list_transit_domain()
+        found_td = None
 
-    def createPap(self, **kwargs):
+        for value in all_tds['transit_domains']:
+            if value['name'] == td_name:
+                found_td = value['id']
+
+        return found_td
+
+    def create_pap(self, **kwargs):
         """
             REST Function to create return (created) PAP
             ARGUMENTS **kwargs will have:
@@ -258,79 +206,57 @@ class RESTClient(object):
             RETURN TYPE: JSON
         """
 
-        # Set up URL to be accessed
+        # Get authentication
+        self._authenticate()
+
         url = self.base_url + self.port_neutron + self.pap_url
 
-        # Set up Custom Headers for Request
-        headers = {'X-Auth-Token': self.accessToken,
-                   'accept': 'application/json',
-                   'content-type': 'application/json'}
-
         data = {"physical_attachment_point": kwargs}
+        body = jsonutils.dumps(data)
+        response = requests.post(url, headers=self.headers, data=body)
+        resp_body = response.json()
 
-        # Convert it into JSON
-        dataInJson = jsonutils.dumps(data)
+        return resp_body
 
-        # Send POST request to create PAP and get RESPONSE
-        response = requests.post(url, headers=headers, data=dataInJson)
-
-        # Convert response in JSON
-        jsonResp = response.json()
-
-        # Return JSON of response
-        return jsonResp
-
-    def showPap(self, papId):
+    def show_pap(self, pap_id):
         """
             Function to return a specific PAP
             ARGUMENTS:
-                papId = ID of Physical Attachment Point
+                pap_id = ID of Physical Attachment Point
             RETURN TYPE: JSON
         """
 
+        # Get authentication
+        self._authenticate()
+
         # Set up URL for a specific Transit Domain to be accessed
         url = self.base_url + self.port_neutron \
-            + self.pap_url + "/" + papId
+            + self.pap_url + "/" + pap_id
 
-        # Set up Custom Headers for Request
-        headers = {'X-Auth-Token': self.accessToken,
-                   'accept': 'application/json',
-                   'content-type': 'application/json'}
+        response = requests.get(url, headers=self.headers)
+        resp_body = response.json()
 
-        # Send GET request and get RESPONSE
-        response = requests.get(url, headers=headers)
+        return resp_body
 
-        # Convert response in JSON
-        jsonResp = response.json()
-
-        # Return JSON of response
-        return jsonResp
-
-    def listPap(self):
+    def list_pap(self):
         """
             REST Function to list all (existing) PAPs
             ARGUMENTS: NONE
             RETURN TYPE: JSON
         """
 
+        # Get authentication
+        self._authenticate()
+
         # Set up URL to be accessed
         url = self.base_url + self.port_neutron + self.pap_url
-
-        # Set up Custom Headers for Request
-        headers = {'X-Auth-Token': self.accessToken,
-                   'accept': 'application/json',
-                   'content-type': 'application/json'}
-
-        # Send GET request to List all TDs and get response in JSON
-        response = requests.get(url, headers=headers)
-
-        # Convert response in JSON
-        jsonResp = response.json()
+        response = requests.get(url, headers=self.headers)
+        json_resp = response.json()
 
         # Return JSON of response
-        return jsonResp
+        return json_resp
 
-    def updatePap(self, papId, **kwargs):
+    def update_pap(self, pap_id, **kwargs):
         """
             Function to update PAP with given new parameters
             ARGUMENTS
@@ -345,53 +271,40 @@ class RESTClient(object):
             RETURN TYPE: JSON
         """
 
+        # Get authentication
+        self._authenticate()
+
         # Set up URL to specific access to PAP
         url = self.base_url + self.port_neutron \
-            + self.pap_url + "/" + papId
+            + self.pap_url + "/" + pap_id
 
-        # Set up Custom Headers for Request
-        headers = {'X-Auth-Token': self.accessToken,
-                   'accept': 'application/json',
-                   'content-type': 'application/json'}
-
-        # Set up parameters to send PAP request according to variables
+        # Create Resource
         data = {"physical_attachment_point": kwargs}
+        body = jsonutils.dumps(data)
+        response = requests.put(url, headers=self.headers, data=body)
+        resp_body = jsonutils.loads(response.text)
 
-        # Convert it into JSON
-        dataInJson = jsonutils.dumps(data)
+        return resp_body
 
-        # Send PUT request to update Transit Domain Details
-        response = requests.put(url, headers=headers, data=dataInJson)
-
-        # NOTE: response returns 200 in normal cases
-        # so get body.text which is String; converts it to JSON
-        jsonResp = jsonutils.loads(response.text)
-
-        # return JSON Response
-        return jsonResp
-
-    def deletePap(self, papId):
+    def delete_pap(self, pap_id):
         """
             Function to delete PAP with given UUID
             ARGUMENTS:
-                papId = ID of Physical Attachment Point to find it
+                pap_id = ID of Physical Attachment Point to find it
             RETURN TYPE: boolean [True, False]
         """
 
+        # Get authentication
+        self._authenticate()
+
         # Set up URL to specific access Transit Domain
         url = self.base_url + self.port_neutron \
-            + self.pap_url + "/" + papId
+            + self.pap_url + "/" + pap_id
 
-        # Set up Custom Headers for Request
-        headers = {'X-Auth-Token': self.accessToken,
-                   'accept': 'application/json',
-                   'content-type': 'application/json'}
-
-        # Send PUT request to delete Transit Domain Details
-        response = requests.delete(url, headers=headers)
+        response = requests.delete(url, headers=self.headers)
 
         # if server deleted transit domain successfully then return true
-        if(response.status_code == 204):
+        if response.status_code == 204:
             return True
         else:
             return False
