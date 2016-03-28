@@ -25,41 +25,41 @@ class TestTransitDomain(base.BaseNetworkTest):
         - CRUD Transit Domains
     """
 
+    # Rest Client object to make REST Calls
+    rest_c = rs.RESTClient("admin", "admin", "pass")
+
     @test.idempotent_id('2def4f70-bff8-4620-9505-876001395785')
-    def test_create_transit_domain(self):
+    def test_create_single_transit_domain(self):
         """
             Functionality
-            - create a transit domain
+            - create a single transit domain
+            - verify it by name
         """
-
-        rest_c = rs.RESTClient("admin", "admin", "pass")
 
         # generate a random number and concatenate with Transit Domain Name
         temp_td_name = "my_TD_" + str(random.randint(100, 10000))
 
-        new_transit_domain = rest_c.create_transit_domain(temp_td_name)
+        new_transit_domain = self.rest_c.create_transit_domain(temp_td_name)
 
         # Verifying TD Creation with it's name
         self.assertEqual(temp_td_name,
                          new_transit_domain['transit_domain']['name'])
 
         # CleanUp: Delete the created transit domain
-        rest_c.delete_transit_domain(
+        self.rest_c.delete_transit_domain(
             td_id=new_transit_domain['transit_domain']['id'])
 
     @test.idempotent_id('5126aae8-f595-43b9-9b2b-44a650e69138')
-    def test_show_transit_domain(self):
+    def test_show_single_transit_domain(self):
         """
-            Function: Tests whether details of Transit Domain
+            Function: Tests whether details of a Single Transit Domain
             is correctly fetched or not.
         """
 
-        rest_c = rs.RESTClient("admin", "admin", "pass")
+        temp_td = self.rest_c.create_transit_domain(
+            "my_TD_" + str(random.randint(70, 700)))
 
-        temp_td = rest_c.create_transit_domain("my_TD_" +
-                                               str(random.randint(70, 700)))
-
-        transit_domain = rest_c.show_transit_domain(
+        transit_domain = self.rest_c.show_transit_domain(
             temp_td['transit_domain']['id'])
 
         # compare TD IDs to verify correctness
@@ -67,31 +67,30 @@ class TestTransitDomain(base.BaseNetworkTest):
                          transit_domain['transit_domain']['id'])
 
         # CleanUp: Delete the created transit domain
-        rest_c.delete_transit_domain(td_id=temp_td['transit_domain']['id'])
+        self.rest_c.delete_transit_domain(
+            td_id=temp_td['transit_domain']['id'])
 
     @test.idempotent_id('409ac550-ba8c-4a6d-afe1-4ab642d047ee')
-    def test_create_update_transit_domain(self):
+    def test_create_update_single_transit_domain(self):
         """
             Functionality
             - create a transit domain
             - update its name
         """
 
-        rest_c = rs.RESTClient("admin", "admin", "pass")
-
-        transit_domain = rest_c.create_transit_domain(
+        transit_domain = self.rest_c.create_transit_domain(
                          "my_TD_" + str(random.randint(70, 700)))
 
         new_td_name = "updated_name_my_TD_" + str(random.randint(100, 10000))
 
-        transit_domain = rest_c.update_transit_domain(
+        transit_domain = self.rest_c.update_transit_domain(
                         transit_domain['transit_domain']['id'], new_td_name)
 
         # compare TD Names to verify correctness
         self.assertEqual(new_td_name, transit_domain['transit_domain']['name'])
 
         # CleanUp: Delete the created transit domain
-        rest_c.delete_transit_domain(
+        self.rest_c.delete_transit_domain(
             td_id=transit_domain['transit_domain']['id'])
 
     @test.idempotent_id('87601bd1-872c-451d-b126-fb1c8a8017b0')
@@ -102,7 +101,6 @@ class TestTransitDomain(base.BaseNetworkTest):
             - list all create transit domains
         """
 
-        rest_c = rs.RESTClient("admin", "admin", "pass")
         total_tds = 5             # total TDs to be created
         total_matches = 0         # total Matches to be found
         my_transit_domains = {}    # dict to create new TDs
@@ -110,10 +108,10 @@ class TestTransitDomain(base.BaseNetworkTest):
         # Create 5 Transit Domains and save their IDs
         for i in range(0, total_tds):
             td_name = "my_TD_" + str(random.randint(500, 5000))
-            new_td = rest_c.create_transit_domain(td_name)
+            new_td = self.rest_c.create_transit_domain(td_name)
             my_transit_domains[td_name] = new_td['transit_domain']['id']
 
-        all_tds = rest_c.list_transit_domain()
+        all_tds = self.rest_c.list_transit_domain()
 
         # compare newly created domains within existing TDs
         for td_name, td_id in my_transit_domains.items():
@@ -127,21 +125,20 @@ class TestTransitDomain(base.BaseNetworkTest):
 
         # CleanUp: Delete all newly created TDs
         for td_name, td_id in my_transit_domains.items():
-            rest_c.delete_transit_domain(td_id=td_id)
+            self.rest_c.delete_transit_domain(td_id=td_id)
 
     @test.idempotent_id('e102a2c5-7d66-4b44-83f3-c046bbe7ee40')
-    def test_delete_transit_domain(self):
+    def test_delete_single_transit_domain(self):
         """
             Functionality:
             - Create new Transit Domain
             - delete  created transit domain
         """
-        rest_c = rs.RESTClient("admin", "admin", "pass")
 
-        transit_domain = rest_c.create_transit_domain(
+        transit_domain = self.rest_c.create_transit_domain(
                          "my_TD_" + str(random.randint(70, 700)))
 
-        result = rest_c.delete_transit_domain(
+        result = self.rest_c.delete_transit_domain(
             td_id=transit_domain['transit_domain']['id'])
 
         # compare results of deletion
@@ -155,17 +152,16 @@ class TestTransitDomain(base.BaseNetworkTest):
             - do a get call using uuid of one transit domain
         """
 
-        rest_c = rs.RESTClient("admin", "admin", "pass")
         found = False              # if match was found
         my_transit_domains = {}    # dict to save new TDs
 
         # Create 5 Transit Domains and save their IDs
         for i in range(0, 5):
             td_name = "my_TD_" + str(random.randint(500, 5000))
-            new_td = rest_c.create_transit_domain(td_name)
+            new_td = self.rest_c.create_transit_domain(td_name)
             my_transit_domains[td_name] = new_td['transit_domain']['id']
 
-        all_tds = rest_c.list_transit_domain()
+        all_tds = self.rest_c.list_transit_domain()
 
         for value in all_tds['transit_domains']:
 
@@ -179,7 +175,7 @@ class TestTransitDomain(base.BaseNetworkTest):
 
         # CleanUp: Delete all newly created TDs
         for td_name, td_id in my_transit_domains.items():
-            rest_c.delete_transit_domain(td_id=td_id)
+            self.rest_c.delete_transit_domain(td_id=td_id)
 
     @test.idempotent_id('8f140d55-92bf-463c-ae95-8212cd18ea81')
     def test_create_show_transit_domain_by_name(self):
@@ -189,19 +185,18 @@ class TestTransitDomain(base.BaseNetworkTest):
             - do a get call using name of one transit domain
         """
 
-        rest_c = rs.RESTClient("admin", "admin", "pass")
-        found = False              # if match was found
+        found = False                # if match was found
         my_transit_domains = {}      # dict to save new TDs
         to_remove_tds = {}           # dict to save TD IDs created
 
         # Create 5 Transit Domains and save their IDs
         for i in range(0, 5):
             td_name = "my_TD_" + str(random.randint(500, 5000))
-            new_td = rest_c.create_transit_domain(td_name)
+            new_td = self.rest_c.create_transit_domain(td_name)
             my_transit_domains[td_name] = new_td['transit_domain']['name']
             to_remove_tds[td_name] = new_td['transit_domain']['id']
 
-        all_tds = rest_c.list_transit_domain()
+        all_tds = self.rest_c.list_transit_domain()
 
         for value in all_tds['transit_domains']:
 
@@ -215,7 +210,7 @@ class TestTransitDomain(base.BaseNetworkTest):
 
         # CleanUp: Delete all newly created TDs
         for td_name, td_id in to_remove_tds.items():
-            rest_c.delete_transit_domain(td_id=td_id)
+            self.rest_c.delete_transit_domain(td_id=td_id)
 
     @test.idempotent_id('e102a2c5-7d66-4b44-83f3-c046bbe7ee40')
     def test_create_delete_transit_domain_by_uuid(self):
@@ -224,15 +219,15 @@ class TestTransitDomain(base.BaseNetworkTest):
             - create five transit domains
             - delete one of them using uuid
         """
-        rest_c = rs.RESTClient("admin", "admin", "pass")
+
         my_transit_domains = {}    # dict to save new TDs
         # Create 5 Transit Domains and save their IDs
         for i in range(0, 5):
             td_name = "my_TD_" + str(random.randint(500, 5000))
-            new_td = rest_c.create_transit_domain(td_name)
+            new_td = self.rest_c.create_transit_domain(td_name)
             my_transit_domains[td_name] = new_td['transit_domain']['id']
 
-        result = rest_c.delete_transit_domain(
+        result = self.rest_c.delete_transit_domain(
                  td_id=my_transit_domains[td_name])
 
         # compare results of deletion
@@ -240,7 +235,7 @@ class TestTransitDomain(base.BaseNetworkTest):
 
         # CleanUp: Delete all newly created TDs
         for td_name, td_id in my_transit_domains.items():
-            rest_c.delete_transit_domain(td_id=td_id)
+            self.rest_c.delete_transit_domain(td_id=td_id)
 
     @test.idempotent_id('88142557-36fb-4197-a7e0-3b1cbe42aac0')
     def test_create_delete_transit_domain_by_name01(self):
@@ -249,18 +244,18 @@ class TestTransitDomain(base.BaseNetworkTest):
             - create five transit domains
             - delete one of them using name
         """
-        rest_c = rs.RESTClient("admin", "admin", "pass")
+
         my_transit_domains = {}    # dict to save new TDs
         to_remove_tds = {}           # dict to save TD IDs created
 
         # Create 5 Transit Domains and save their IDs
         for i in range(0, 5):
             td_name = "my_TD_" + str(random.randint(500, 5000))
-            new_td = rest_c.create_transit_domain(td_name)
+            new_td = self.rest_c.create_transit_domain(td_name)
             my_transit_domains[td_name] = new_td['transit_domain']['name']
             to_remove_tds[td_name] = new_td['transit_domain']['id']
 
-        result = rest_c.delete_transit_domain(
+        result = self.rest_c.delete_transit_domain(
                  td_name=my_transit_domains[td_name])
 
         # compare results of deletion
@@ -268,7 +263,7 @@ class TestTransitDomain(base.BaseNetworkTest):
 
         # CleanUp: Delete all newly created TDs
         for td_name, td_id in to_remove_tds.items():
-            rest_c.delete_transit_domain(td_id=td_id)
+            self.rest_c.delete_transit_domain(td_id=td_id)
 
     @test.idempotent_id('2fbea59a-21a7-445d-9ae3-3e4b7554756a')
     def test_create_delete_transit_domain_by_name02(self):
@@ -276,8 +271,9 @@ class TestTransitDomain(base.BaseNetworkTest):
             Functionality:
             - create five transit domains with repeating names
             - delete one of them using repeating name
+            - test case expects False result from REST
         """
-        rest_c = rs.RESTClient("admin", "admin", "pass")
+
         my_transit_domains = {}    # dict to save new TDs
         to_remove_tds = {}         # dict to save TD IDs created
 
@@ -287,19 +283,19 @@ class TestTransitDomain(base.BaseNetworkTest):
 
         # Create 5 Transit Domains and save their IDs
         for i in range(0, 5):
-            new_td = rest_c.create_transit_domain(td_name)
+            new_td = self.rest_c.create_transit_domain(td_name)
             my_transit_domains[td_name] = new_td['transit_domain']['name']
             to_remove_tds[td_name] = new_td['transit_domain']['id']
 
-        result = rest_c.delete_transit_domain(
+        result = self.rest_c.delete_transit_domain(
                  td_name=my_transit_domains[td_name])
 
         # compare results of deletion
-        self.assertEqual(True, result)
+        self.assertEqual(False, result)
 
         # CleanUp: Delete all newly created TDs
         for td_name, td_id in to_remove_tds.items():
-            rest_c.delete_transit_domain(td_id=td_id)
+            self.rest_c.delete_transit_domain(td_id=td_id)
 
     @test.idempotent_id('44112746-5b1c-48b6-a374-c8688faafc55')
     def test_delete_transit_domain_without_creation(self):
@@ -307,8 +303,8 @@ class TestTransitDomain(base.BaseNetworkTest):
             Functionality:
             - delete a transit domain without creating it
         """
-        rest_c = rs.RESTClient("admin", "admin", "pass")
-        result = rest_c.delete_transit_domain(td_id="")
+
+        result = self.rest_c.delete_transit_domain(td_id="")
 
         # compare results of deletion
         self.assertEqual(False, result)
@@ -319,8 +315,7 @@ class TestTransitDomain(base.BaseNetworkTest):
             Functionality:
             - update a transit domain without creating it
         """
-        rest_c = rs.RESTClient("admin", "admin", "pass")
-        transit_domain = rest_c.update_transit_domain(
+        transit_domain = self.rest_c.update_transit_domain(
             "064b2dfc-f608-4e65-916f-eba1656e9118", "newName_TD")
 
         self.assertEqual("NoTransitDomainFound",

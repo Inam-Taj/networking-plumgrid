@@ -58,6 +58,10 @@ class RESTClient(object):
         return resp_body['access']['token']['id']
 
     def _authenticate(self):
+        """
+            This function returns Access Token
+            from Neutron API after Authentication
+        """
         token = self._get_access_token()
         self.headers.update({'X-Auth-Token': token})
 
@@ -141,7 +145,10 @@ class RESTClient(object):
 
     def delete_transit_domain(self, **kwargs):
         """
-            Function to delete Transit Domain with given ID of Transit Domain
+            Function to delete Transit Domain with given ID or Name of
+            Transit Domain.
+            Note: Function will return False if there exists a Transit Domain
+            with duplicate names.
             ARGUMENTS which kwargs MAY have:
                 td_id = ID of Transit Domain (not tenant_id) to find TD by ID
                 td_name = Name of Transit Domain
@@ -151,47 +158,61 @@ class RESTClient(object):
         # Get authentication
         self._authenticate()
 
-        td_id = None
+        # if UUID is provided, then delete by ID
+        if 'td_id' in kwargs:
+            td_id = kwargs["td_id"]
+            return self.__delete_transit_domain_by_uuid(td_id)
 
-        # if td_name is given, then resolve its UUID
-        if 'td_name' in kwargs:
-            td_id = self.__get_transit_domain_by_name(kwargs['td_name'])
+        # if Name of TD is given, then process respectively
+        elif 'td_name' in kwargs:
+            td_name = kwargs["td_name"]
 
-            # if UUID of Transit Domain is not found
-            if td_id is None:
+            # Set up GET request with TD name
+            url = self.base_url + self.port_neutron + self.transit_domain_url\
+                + "?fields=id&name=" + td_name
+            response = requests.get(url, headers=self.headers)
+            resp_body = response.json()
+            transit_domains = resp_body['transit_domains']
+
+            # get number of transit domains with given name,
+            # returned from response
+            no_of_domains = len(transit_domains)
+
+            # if duplication exist
+            if no_of_domains > 1:
                 return False
-        else:
-            td_id = kwargs['td_id']
 
-        # Set up URL to specific access Transit Domain
+            # if Transit Domain not found
+            elif no_of_domains == 0:
+                return False
+
+            # if correct Transit Domain found
+            elif no_of_domains == 1:
+
+                # Delete it by UUID
+                return self.__delete_transit_domain_by_uuid(
+                                            transit_domains[0]['id'])
+
+        # if no argument inside kwargs
+        else:
+            return False
+
+    def __delete_transit_domain_by_uuid(self, td_id):
+        """
+            Private Function
+            This function deletes a Transit Domain
+            by its UUID
+        """
         url = self.base_url + self.port_neutron \
             + self.transit_domain_url + "/" + td_id
 
         response = requests.delete(url, headers=self.headers)
 
-        # if server deleted transit domain successfully then return true
+        # if server deleted transit domain successfully
         if response.status_code == 204:
             return True
         else:
             return False
-
-    def __get_transit_domain_by_name(self, td_name):
-        """
-            Function that resolves Transit Domain's Name to
-            respective UUID. It returns None if UUID isn't resovled
-        """
-
-        # Get authentication
-        self._authenticate()
-
-        all_tds = self.list_transit_domain()
-        found_td = None
-
-        for value in all_tds['transit_domains']:
-            if value['name'] == td_name:
-                found_td = value['id']
-
-        return found_td
 
     def create_pap(self, **kwargs):
         """
