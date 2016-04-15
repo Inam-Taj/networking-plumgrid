@@ -187,7 +187,6 @@ class RESTClient(object):
 
             # if correct Transit Domain found
             elif no_of_domains == 1:
-
                 # Delete it by UUID
                 return self._delete_transit_domain_by_uuid(
                                             transit_domains[0]['id'])

@@ -19,6 +19,58 @@ from tempest import test
 CONF = config.CONF
 
 
+def _get_interface_list():
+    """
+        This function reads list of interfaces
+        from CONF in the following format:
+        interfaces = host1+interface1+interface2, host2+interface2
+        and parses this list into entries of interface dictionaries
+    """
+
+    all_interfaces = []  # List to save all interfaces
+
+    raw_intfs = CONF.plumgrid.interfaces
+
+    for val in raw_intfs:
+        temp_dict = {}
+        temp_entry = val.split("+")
+        temp_dict.setdefault('hostname', temp_entry[0])
+        temp_dict.setdefault('interface_name', [])
+
+        for item in temp_entry:
+            if item == temp_entry[0]:
+                continue
+            else:
+                temp_dict['interface_name'].append(item)
+
+        # add interface dict to final list
+        all_interfaces.append(temp_dict)
+
+    return all_interfaces
+
+
+def _get_first_hostname():
+    """
+        This function returns hostname of first
+        entry from list of interfaces from CONF
+    """
+
+    all_intfs = _get_interface_list()
+    first = all_intfs[0]
+    return first['hostname']
+
+
+def _get_first_interface():
+    """
+        This function returns first interface of first
+        entry from list of interfaces from CONF
+    """
+
+    all_intfs = _get_interface_list()
+    first = all_intfs[0]
+    return first['interface_name'][0]
+
+
 class TestPhysicalAttachmentPoint(base.BaseNetworkTest):
     """
         This class contains Test Cases for Physical
@@ -26,12 +78,12 @@ class TestPhysicalAttachmentPoint(base.BaseNetworkTest):
         Document: "Physical Attachment Point Tempest Test Plan"
     """
 
-    # Global parameters to be used by Tests
+    # Class parameters to be used by Tests
     username = CONF.auth.admin_username
     tenant_name = CONF.auth.admin_tenant_name
     password = CONF.auth.admin_password
-    hostname = CONF.plumgrid.hostname
-    interface = CONF.plumgrid.interfaces[0]
+    hostname = _get_first_hostname()
+    interface = _get_first_interface()
 
     # REST Client's object to make REST calls
     rest_c = rs.RESTClient(tenant_name, username, password)

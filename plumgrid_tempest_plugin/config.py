@@ -33,14 +33,11 @@ plumgrid_group = cfg.OptGroup(name='plumgrid',
 
 # Added options for Plumgrid Group
 PlumgridGroup = [
-    cfg.StrOpt('hostname',
-               default='home',
-               help="Name of Host Machine on which plumgrid tempest tests\
-                for PAP will run."),
+
     cfg.ListOpt('interfaces',
-                default=['eth0'],
+                default=['localhost+eth1'],
                 help="List of Network Interfaces of Machine on which plumgrid\
-                tempest tests for PAP will run."),
+                tempest tests will run."),
 ]
 
 # Register Plumgrid options with PG group
